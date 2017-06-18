@@ -1,6 +1,6 @@
-HOME FOOD
-=========
-IoT enabled rabbit food dispenser. [More information](https://conejoninja.github.io/home/)
+HOME FOOD 01
+============
+IoT enabled rabbit feeder. Find a lot more information and explanations on the [Github pages](https://conejoninja.github.io/home/devices/food01/).
 
 ## License
 

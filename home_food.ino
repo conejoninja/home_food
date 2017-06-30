@@ -150,6 +150,8 @@ void setup() {
   // Uncomment to reset the alarms (or do it via MQTT call!)
   //setMemory(1, 0);
   //setMemory(2, 0);
+  //setMemory(3, 2000);
+  //setMemory(4, 700);
   /**** END SETUP CLOCK ****/
   
   
@@ -480,12 +482,25 @@ void doFood(uint8 alarm) {
   } else {
     // SET NEXT EXECUTION IN A DAY
     if(alarm==1 || alarm==2) {
+      uint32 mNext = 0;
       uint8 hourNext = 20;
-      if(alarm==2) {
-        hourNext = 7;
+      uint8 minNext = 0;
+      if(alarm==1) {
+        mNext = getMemory(3);
+      } else {
+        mNext = getMemory(4);
       }
+      minNext = mNext%100;
+      hourNext = ((mNext-minNext)/100);
+      if(minNext>59) {
+        minNext = 0;
+        hourNext++;
+      }
+      hourNext = hourNext%24;
       RtcDateTime now = Rtc.GetDateTime();
-      RtcDateTime next = RtcDateTime(now.Year(), now.Month(), now.Day(), hourNext, 0, 0);
+      RtcDateTime next = RtcDateTime(now.Year(), now.Month(), now.Day(), hourNext, minNext, 0);
+      Serial.println("[NEXT ALARM SET]");
+      printDateTime(next);
       uint32 totalNext = next.TotalSeconds();
       totalNext += 86390; // 24*60*60-10
       Serial.print("TOTALNEXT ");
@@ -539,7 +554,7 @@ void getTemp() {
   Serial.println("[GET TEMP]");
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);
-  delayMS = sensor.min_delay / 1000;  
+  delayMS = 2100;//sensor.min_delay / 1000;  
   uint8 n = 5; // number of samples we take
   uint8 nT = 0;
   uint8 nH = 0;

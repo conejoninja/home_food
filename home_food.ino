@@ -467,14 +467,16 @@ void doFood(uint8 alarm) {
      maxRotation = MAXLONGROTATION;
   }
   if(MOTORENABLED==1) {
-    while(tries<70 && pos<maxRotation) {
+    for(tries=0;tries<70;tries++) {
       doMotor();
-      tries++;    
+      if(pos>=maxRotation || pos<(-maxRotation)) {
+        break;  
+      }
     }
   }
   char* alertMsg;
   uint8 alertPriority;
-  if(tries>=70) {
+  if(pos<maxRotation && pos>(-maxRotation)) {
     // Send alert, it's jammed (didn't move enough)
     // Don't modify memory value, so next wake up will try to dispense food again.
     alertMsg = "Food01 is jammed. No food served.";

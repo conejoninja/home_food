@@ -99,6 +99,23 @@ boolean isConnected = true;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+
+// Calculate how much food has been dispensed
+void ICACHE_RAM_ATTR interruptEncoder() {
+  volatile boolean a = digitalRead(ENCODERAPIN); 
+  volatile boolean b = digitalRead(ENCODERBPIN); 
+  if(a) {
+    CW = (a != b);
+    if (CW)  {
+      pos++;
+    } else { 
+      pos--;
+    }
+  }
+}
+
+
+
 void setup() {
   //Serial.begin(115200); // Disable if the motor is connected
   Serial.println("[SETUP]");
@@ -469,11 +486,14 @@ void doFood(uint8 alarm) {
   if(MOTORENABLED==1) {
     for(tries=0;tries<70;tries++) {
       doMotor();
+      delay(10);
       if(pos>=maxRotation || pos<(-maxRotation)) {
         break;  
       }
     }
   }
+
+
   char* alertMsg;
   uint8 alertPriority;
   if(pos<maxRotation && pos>(-maxRotation)) {
@@ -757,19 +777,6 @@ uint32 getMemory(uint8 alarm) {
   return 0;
 }
 
-// Calculate how much food has been dispensed
-void interruptEncoder() {
-  boolean a = digitalRead(ENCODERAPIN); 
-  boolean b = digitalRead(ENCODERBPIN); 
-  if(a) {
-    CW = (a != b);
-    if (CW)  {
-      pos++;
-    } else { 
-      pos--;
-    }
-  }
-}
 
 void loop() { }
 

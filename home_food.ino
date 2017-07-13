@@ -80,9 +80,6 @@ const char* listen_channel = "food01-call";
 #define MOTORENABLED  1 // Motor is using the serial pins, set to 0 to disable it and be able to debug via Serial
 #define DHTENABLED    1
 
-#define MAXLONGROTATION   120 // SET NUMBER OF MAX ROTATION FOR FOOD
-#define MAXSHORTROTATION  30 // SET NUMBER OF MAX ROTATION FOR FOOD
-
 // Uncomment the type of sensor in use
 #define DHTTYPE           DHT11     // DHT 11 
 //#define DHTTYPE           DHT22     // DHT 22 (AM2302)
@@ -165,10 +162,12 @@ void setup() {
   
   // RESET ALARMS 
   // Uncomment to reset the alarms (or do it via MQTT call!)
-  //setMemory(1, 0);
-  //setMemory(2, 0);
+  //setMemory(1, 553291190);
+  //setMemory(2, 553330790);
   //setMemory(3, 2000);
   //setMemory(4, 700);
+  //setMemory(5, 20);
+  //setMemory(6, 110);
   /**** END SETUP CLOCK ****/
   
   
@@ -313,7 +312,7 @@ void processCall(JsonObject& root) {
       }
     } else if(root["name"]=="getmem") {
       
-      StaticJsonBuffer<400> jsonBuffer;
+      StaticJsonBuffer<600> jsonBuffer;
       JsonObject& root = jsonBuffer.createObject();
       JsonArray& out = root.createNestedArray("");
       
@@ -321,6 +320,8 @@ void processCall(JsonObject& root) {
       JsonObject& m2 = jsonBuffer.createObject();
       JsonObject& m3 = jsonBuffer.createObject();
       JsonObject& m4 = jsonBuffer.createObject();
+      JsonObject& m5 = jsonBuffer.createObject();
+      JsonObject& m6 = jsonBuffer.createObject();
   
       m1["id"] = "m1";
       m1["value"] = getMemory(1);
@@ -330,15 +331,22 @@ void processCall(JsonObject& root) {
       m3["value"] = getMemory(3);
       m4["id"] = "m4";
       m4["value"] = getMemory(4);
+      m5["id"] = "m5";
+      m5["value"] = getMemory(5);
+      m6["id"] = "m6";
+      m6["value"] = getMemory(6);
+      Serial.println(getMemory(5));
       
       out.add(m1);
       out.add(m2);
       out.add(m3);
       out.add(m4);
+      out.add(m5);
+      out.add(m6);
       
       String output;
       out.printTo(output);   
-      char msg[120];
+      char msg[220];
       output.toCharArray(msg, (output.length() + 1));     
 
       Serial.print("[GET MEM] ");
@@ -371,10 +379,12 @@ void reconnect() {
          "out":[
             {"id":"t1","name":"temperature"},
             {"id":"h1","name":"humidity"},
-            {"id":"m1","name":"alarm1"},
-            {"id":"m2","name":"alarm2"},
-            {"id":"m3","name":"memory1"},
-            {"id":"m4","name":"memory2"}
+            {"id":"m1","name":"memory1"},
+            {"id":"m2","name":"memory2"},
+            {"id":"m3","name":"alarm1"},
+            {"id":"m4","name":"alarm2"},
+            {"id":"m5","name":"bigqty"},
+            {"id":"m6","name":"smallqty"}
          ],
          "methods":[
             {"name":"food"},
@@ -386,7 +396,7 @@ void reconnect() {
        */
 
 
-      StaticJsonBuffer<1000> jsonBuffer;
+      StaticJsonBuffer<1300> jsonBuffer;
       JsonObject& root = jsonBuffer.createObject();
       root["id"] = device_id;
       root["name"] = device_name;
@@ -405,11 +415,11 @@ void reconnect() {
       out.add(out_humd);
       JsonObject& out_mem1 = jsonBuffer.createObject();
       out_mem1["id"] = "m1";
-      out_mem1["name"] = "alarm1";
+      out_mem1["name"] = "memory1";
       out.add(out_mem1);
       JsonObject& out_mem2 = jsonBuffer.createObject();
       out_mem2["id"] = "m2";
-      out_mem2["name"] = "alarm2";
+      out_mem2["name"] = "memory2";
       out.add(out_mem2);
       JsonObject& out_mem3 = jsonBuffer.createObject();
       out_mem3["id"] = "m3";
@@ -419,6 +429,14 @@ void reconnect() {
       out_mem4["id"] = "m4";
       out_mem4["name"] = "memory2";
       out.add(out_mem4);
+      JsonObject& out_mem5 = jsonBuffer.createObject();
+      out_mem5["id"] = "m5";
+      out_mem5["name"] = "bigqty";
+      out.add(out_mem5);
+      JsonObject& out_mem6 = jsonBuffer.createObject();
+      out_mem6["id"] = "m6";
+      out_mem6["name"] = "smallqty";
+      out.add(out_mem6);
 
       JsonArray& methods = root.createNestedArray("methods");
       JsonObject& m1 = jsonBuffer.createObject();
@@ -452,7 +470,7 @@ void reconnect() {
       String output;
       root.printTo(output);
 
-      char msg[420];
+      char msg[520];
       output.toCharArray(msg, (output.length() + 1));
       Serial.println(msg);
       boolean sent = client.publish("discovery", msg);
@@ -479,9 +497,11 @@ void doFood(uint8 alarm) {
   uint8 tries = 0; // AVOID GETTING STUCK IF MOTOR IS JAMMED
   pos = 0;
 
-  int maxRotation = MAXSHORTROTATION;
+  int maxRotation = 0;
   if(alarm==1) {
-     maxRotation = MAXLONGROTATION;
+     maxRotation = getMemory(5);
+  } else {
+     maxRotation = getMemory(6);
   }
   if(MOTORENABLED==1) {
     for(tries=0;tries<70;tries++) {
@@ -704,20 +724,39 @@ void doPing(const char* message) {
 void event(const char* message, uint8 priority) {
   Serial.println("[EVENT]");
   Serial.println(message);
-  StaticJsonBuffer<120> jsonBuffer;
-  JsonObject& root = jsonBuffer.createObject();
-  root["id"] = device_id;
-  root["message"] = message;
-  root["priority"] = priority;
 
-  String output;
-  root.printTo(output);   
-  char msg[120];
-  output.toCharArray(msg, (output.length() + 1));      
+  if(isConnected) {
+    /**** START MQTT STUFF ****/
+    client.setServer(mqtt_server, mqtt_port);
+    client.setCallback(callback);
+    
+    if(!client.connected()) {
+      reconnect();
+    }
+
+    if(client.connected()) {
+      Serial.println("CLIENT LOOP [EVENT]");
+
+      StaticJsonBuffer<420> jsonBuffer;
+      JsonObject& root = jsonBuffer.createObject();
+      root["id"] = device_id;
+      root["message"] = message;
+      root["priority"] = priority;
+      
+      String output;
+      root.printTo(output);   
+      char msg[220];
+      output.toCharArray(msg, (output.length() + 1));      
+      
+      boolean sent = client.publish("events", msg);
+      Serial.print("[EVENT SENT] ");
+      Serial.println(sent);  
+      
+    }
+    /**** END MQTT STUFF ****/
+  }  
   
-  boolean sent = client.publish("events", msg);
-  Serial.print("[EVENT SENT] ");
-  Serial.println(sent);  
+  
 }
 
 void printDateTime(const RtcDateTime& dt) {
@@ -738,20 +777,32 @@ void printDateTime(const RtcDateTime& dt) {
 // Save data in memory of DS1307
 void setMemory(uint8 alarm, uint32_t dataMemInt) {
   Serial.println("[SET MEMORY]");
-  char dataMem[10];
-  itoa(dataMemInt, dataMem, 10);
-  Rtc.SetMemory(2*(alarm-1), 13*alarm);
-  Serial.println(dataMemInt);
-  Serial.println(dataMem);
-  uint8_t written = Rtc.SetMemory(13*alarm, (const uint8_t*)dataMem, sizeof(dataMem) );
-  Rtc.SetMemory(1+2*(alarm-1), written);
+  if(alarm<=2) {
+    char dataMem[10];
+    itoa(dataMemInt, dataMem, 10);
+    Rtc.SetMemory(2*(alarm-1), 13+(alarm-1)*10);
+    Serial.println(dataMemInt);
+    Serial.println(dataMem);
+    uint8_t written = Rtc.SetMemory(13+(alarm-1)*10, (const uint8_t*)dataMem, sizeof(dataMem) );
+    Serial.println(written);
+    Rtc.SetMemory(1+2*(alarm-1), written);
+  } else {
+    char dataMem[4];
+    itoa(dataMemInt, dataMem, 10);
+    Rtc.SetMemory(2*(alarm-1), 33+(alarm-3)*4);
+    Serial.println(dataMemInt);
+    Serial.println(dataMem);
+    uint8_t written = Rtc.SetMemory(33+(alarm-3)*4, (const uint8_t*)dataMem, sizeof(dataMem) );
+    Serial.println(written);
+    Rtc.SetMemory(1+2*(alarm-1), written);
+  }
 }
 
 // Get values from memory
 uint32 getMemory(uint8 alarm) {
   Serial.println("[GET MEMORY]");
   uint8_t address = Rtc.GetMemory(2*(alarm-1));
-  if (address != (13*alarm)) {
+  if ((alarm<=2 && address != (13+(alarm-1)*10)) || (alarm>2 && address != (33+(alarm-3)*4))) {
     Serial.println("address didn't match");
   } else {
     uint8_t count = Rtc.GetMemory(1+2*(alarm-1));
@@ -760,11 +811,11 @@ uint32 getMemory(uint8 alarm) {
     uint8_t gotten = Rtc.GetMemory(address, buff, count);
     
     if (gotten != count ) {
-      //Serial.print("something didn't match, count = ");
-      //Serial.print(count, DEC);
-      //Serial.print(", gotten = ");
-      //Serial.print(gotten, DEC);
-      //Serial.println();
+      Serial.print("something didn't match, count = ");
+      Serial.print(count, DEC);
+      Serial.print(", gotten = ");
+      Serial.print(gotten, DEC);
+      Serial.println();
     }
     
     while(gotten > 0) {

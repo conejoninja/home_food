@@ -423,11 +423,11 @@ void reconnect() {
       out.add(out_mem2);
       JsonObject& out_mem3 = jsonBuffer.createObject();
       out_mem3["id"] = "m3";
-      out_mem3["name"] = "memory1";
+      out_mem3["name"] = "alarm1";
       out.add(out_mem3);
       JsonObject& out_mem4 = jsonBuffer.createObject();
       out_mem4["id"] = "m4";
-      out_mem4["name"] = "memory2";
+      out_mem4["name"] = "alarm2";
       out.add(out_mem4);
       JsonObject& out_mem5 = jsonBuffer.createObject();
       out_mem5["id"] = "m5";
@@ -506,7 +506,7 @@ void doFood(uint8 alarm) {
   if(MOTORENABLED==1) {
     for(tries=0;tries<70;tries++) {
       doMotor();
-      delay(10);
+      delay(20);
       if(pos>=maxRotation || pos<(-maxRotation)) {
         break;  
       }

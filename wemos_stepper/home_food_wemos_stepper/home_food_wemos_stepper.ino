@@ -528,21 +528,21 @@ void doMotor(int steps) {
   delay(10);
   while(steps>0) {
     digitalWrite(MOTORDIR,HIGH);
-    for(s = 0; s < 70; s++) {
+    for(s = 0; s < 3000; s++) {
       digitalWrite(MOTORSTEP,HIGH);
-      delay(5);
+      delay(1);
       digitalWrite(MOTORSTEP,LOW);
-      delay(5);
+      delay(1);
       steps--;
     }
     delay(10);
     digitalWrite(MOTORDIR,LOW);
     delay(10);
-    for(s = 0; s < 30; s++) {
+    for(s = 0; s < 1000; s++) {
       digitalWrite(MOTORSTEP,HIGH);
-      delay(10);
+      delay(1);
       digitalWrite(MOTORSTEP,LOW);
-      delay(10);
+      delay(1);
     }
   }
   digitalWrite(MOTORSLEEPPIN, LOW);

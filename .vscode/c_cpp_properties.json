@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/home/conejo/.arduino15/packages/esp8266/hardware/esp8266/2.3.0/cores/esp8266"
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": false,
+                "path": [
+                    "/home/conejo/.arduino15/packages/esp8266/hardware/esp8266/2.3.0/cores/esp8266"
+                ]
+            },
+            "intelliSenseMode": "clang-x64"
+        }
+    ]
+}

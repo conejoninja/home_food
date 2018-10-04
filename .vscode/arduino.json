@@ -1,0 +1,6 @@
+{
+    "port": "/dev/ttyS0",
+    "board": "esp8266:esp8266:generic",
+    "configuration": "CpuFrequency=80,FlashFreq=40,FlashMode=dio,UploadSpeed=115200,FlashSize=4M1M,ResetMethod=ck,Debug=Disabled,DebugLevel=None____",
+    "sketch": "home_food.ino"
+}

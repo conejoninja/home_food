@@ -68,7 +68,7 @@ RtcDS1307<TwoWire> Rtc(Wire);
 
 const char APName[] = "DULICOMIDA3000";
 const char* device_id = "food01";
-const char* device_name = "Dulicomida 3001";
+const char* device_name = "Dulicomida 3002";
 const char* listen_channel = "food01-call";
 
 #define DHTPIN              D5         
@@ -107,6 +107,7 @@ void setup() {
   Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
   Serial.println();
+    //Rtc.SetDateTime(compiled);
   
   if (!Rtc.IsDateTimeValid()) {
     // Common Cuases:
@@ -145,8 +146,8 @@ void setup() {
   //setMemory(2, 553330790);
   //setMemory(3, 2000);
   //setMemory(4, 700);
-  //setMemory(5, 200);
-  //setMemory(6, 70);
+  //setMemory(5, 4000);
+  //setMemory(6, 2000);
   /**** END SETUP CLOCK ****/
   
   
@@ -172,7 +173,7 @@ void setup() {
   WiFiManager wifiManager;
   wifiManager.setDebugOutput(false);
   //wifiManager.resetSettings(); // reset saved settings
-  wifiManager.setTimeout(180);
+  wifiManager.setTimeout(300);
   
   if(!wifiManager.autoConnect(APName)) {
     isConnected = false;
@@ -475,8 +476,10 @@ void doFood(uint8 alarm) {
      maxRotation = getMemory(6);
   }
   if(MOTORENABLED==1 && maxRotation!=0) {
-    doMotor(maxRotation);
-    delay(20);
+    doMotor(maxRotation*10);
+    client.loop();
+    yield();
+    delay(1000);
   }
 
 
@@ -523,6 +526,7 @@ void doMotor(int steps) {
   Serial.println("[DO MOTOR]");
   int s;
   int tmpStep = 0;
+  //steps = steps*10;
 
   digitalWrite(MOTORSLEEPPIN, HIGH);
   delay(10);
@@ -534,16 +538,31 @@ void doMotor(int steps) {
       digitalWrite(MOTORSTEP,LOW);
       delay(1);
       steps--;
+      tmpStep++;
+      if(tmpStep>=100) {
+        tmpStep = 0;
+        client.loop();
+        yield();
+      }
     }
-    delay(10);
+    delay(50);
+    yield();
     digitalWrite(MOTORDIR,LOW);
     delay(10);
-    for(s = 0; s < 1000; s++) {
+    for(s = 0; s < 300; s++) {
       digitalWrite(MOTORSTEP,HIGH);
       delay(1);
       digitalWrite(MOTORSTEP,LOW);
       delay(1);
+      tmpStep++;
+      if(tmpStep>=100) {
+        tmpStep = 0;
+        client.loop();
+        yield();
+      }
     }
+    yield();
+    delay(100);
   }
   digitalWrite(MOTORSLEEPPIN, LOW);
 }
@@ -613,8 +632,25 @@ void getTemp() {
     out.printTo(output);   
     char msg[120];
     output.toCharArray(msg, (output.length() + 1));      
+
+
+
+   if(isConnected) {
+      /**** START MQTT STUFF ****/
+      client.setServer(mqtt_server, mqtt_port);
+      client.setCallback(callback);
       
-    client.publish(device_id, msg);
+      if(!client.connected()) {
+        reconnect();
+      }
+  
+      if(client.connected()) {
+        client.publish(device_id, msg);      
+      }
+      /**** END MQTT STUFF ****/
+    } 
+    
+      
   } else {
     event("DHT11 of food01 is not working properly", 1); // alert if we couldn't take any valid data
   }
